@@ -15,13 +15,13 @@
     --muted: #6b7080;
     --line: #e3e5ea;
     --line-2: #cdd1da;
-    --accent: #2242a8;
-    --accent-soft: #eaeefb;
+    --accent: #0e6fa0;
+    --accent-soft: #e4f1f8;
     --critical: #b3261e;
     --critical-soft: #fdeceb;
     --safe: #1e6b45;
     --safe-soft: #e9f4ee;
-    --focus: #2242a8;
+    --focus: #0e6fa0;
 
     --sans: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -37,13 +37,13 @@
       --muted: #8e94a3;
       --line: #262a33;
       --line-2: #363c48;
-      --accent: #8ba6ff;
-      --accent-soft: #1a2138;
+      --accent: #5fb4dc;
+      --accent-soft: #12242e;
       --critical: #f28b84;
       --critical-soft: #2c1a1a;
       --safe: #6cc394;
       --safe-soft: #14251d;
-      --focus: #8ba6ff;
+      --focus: #5fb4dc;
     }
   }
   :root[data-theme="dark"] {
@@ -55,13 +55,13 @@
     --muted: #8e94a3;
     --line: #262a33;
     --line-2: #363c48;
-    --accent: #8ba6ff;
-    --accent-soft: #1a2138;
+    --accent: #5fb4dc;
+    --accent-soft: #12242e;
     --critical: #f28b84;
     --critical-soft: #2c1a1a;
     --safe: #6cc394;
     --safe-soft: #14251d;
-    --focus: #8ba6ff;
+    --focus: #5fb4dc;
   }
 
   * { box-sizing: border-box; }
@@ -77,13 +77,27 @@
   }
 
   .page {
-    max-width: 680px;
+    max-width: 1160px;
     margin: 0 auto;
-    padding: 40px 24px 80px;
+    padding: 44px 32px 88px;
     display: flex;
     flex-direction: column;
-    gap: 40px;
+    gap: 36px;
   }
+
+  /* action on the left, rationale alongside it; stacks under 940px */
+  .workbench {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: 36px;
+    align-items: start;
+  }
+  @media (max-width: 939px) {
+    .workbench { grid-template-columns: minmax(0, 1fr); gap: 30px; }
+  }
+
+  /* prose keeps a readable measure even when its column is wide */
+  .tagline, .explain p, footer p { max-width: 66ch; }
 
   a { color: var(--accent); }
 
@@ -329,7 +343,16 @@
   .msg.bad { color: var(--critical); }
 
   /* ---- explainer + footer --------------------------------------------- */
-  .explain { border-top: 1px solid var(--line); padding-top: 28px; }
+  /* an aside beside the action, not a section under it */
+  .explain {
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 20px 22px;
+  }
+  @media (max-width: 939px) {
+    .explain { background: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 26px 0 0; }
+  }
   .explain h2 { font-size: 15px; font-weight: 600; margin: 0 0 12px; }
   .steps { counter-reset: s; list-style: none; margin: 0 0 18px; padding: 0; display: flex; flex-direction: column; gap: 9px; }
   .steps li {
@@ -379,6 +402,7 @@
     <div class="stat"><dt>Most recent</dt><dd id="s-latest">&mdash;</dd></div>
   </dl>
 
+  <div class="workbench">
   <section class="check">
     <h2>Check a password</h2>
     <p class="lede">Hashed in this browser. Five characters are transmitted; the password itself is not.</p>
@@ -405,6 +429,27 @@
     </div>
   </section>
 
+  <section class="explain">
+    <h2>Why this is safe to use</h2>
+    <ol class="steps">
+      <li>Your password is SHA-1 hashed inside this browser tab.</li>
+      <li>Only the first five characters of that hash are sent to <code>api.pwnedpasswords.com</code>.</li>
+      <li>The API returns every hash beginning with those five characters &mdash; typically a few hundred.</li>
+      <li>Your hash is matched against that list locally, so the answer never leaves your machine.</li>
+    </ol>
+    <p>
+      This is the <strong>k-anonymity model</strong>, the scheme Have I Been Pwned documents for
+      exactly this purpose. The service cannot determine which password you checked. Requests also
+      ask for padding, so the size of the response reveals nothing either.
+    </p>
+    <p>
+      <strong>Email search is not offered here.</strong> That endpoint requires a paid API key and
+      would mean transmitting your address to a server. Search it free at
+      <a href="https://haveibeenpwned.com" target="_blank" rel="noopener">haveibeenpwned.com</a>.
+    </p>
+  </section>
+  </div>
+
   <section class="browse">
     <div class="browse-head">
       <h2>Breach directory</h2>
@@ -426,25 +471,6 @@
     </div>
   </section>
 
-  <section class="explain">
-    <h2>Why this is safe to use</h2>
-    <ol class="steps">
-      <li>Your password is SHA-1 hashed inside this browser tab.</li>
-      <li>Only the first five characters of that hash are sent to <code>api.pwnedpasswords.com</code>.</li>
-      <li>The API returns every hash beginning with those five characters &mdash; typically a few hundred.</li>
-      <li>Your hash is matched against that list locally, so the answer never leaves your machine.</li>
-    </ol>
-    <p>
-      This is the <strong>k-anonymity model</strong>, the scheme Have I Been Pwned documents for
-      exactly this purpose. The service cannot determine which password you checked. Requests also
-      ask for padding, so the size of the response reveals nothing either.
-    </p>
-    <p>
-      <strong>Email search is not offered here.</strong> That endpoint requires a paid API key and
-      would mean transmitting your address to a server. Search it free at
-      <a href="https://haveibeenpwned.com" target="_blank" rel="noopener">haveibeenpwned.com</a>.
-    </p>
-  </section>
 
   <footer>
     <p>
