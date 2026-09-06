@@ -1,0 +1,304 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hashfirst</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --panel: #fff; --ink: #1a1a18; --muted: #6b6b66;
+    --line: #e0e0da; --accent: #7a5cff; --bad: #c2334d; --good: #1f7a4d;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16161a; --panel: #1e1e24; --ink: #ececf0; --muted: #9a9aa4;
+      --line: #2e2e38; --accent: #a58cff; --bad: #ff7a90; --good: #5fd39b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
+  .tabs button {
+    background: none; border: 0; border-bottom: 2px solid transparent;
+    color: var(--muted); font: inherit; padding: 9px 14px; cursor: pointer;
+  }
+  .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  input {
+    width: 100%; padding: 10px 12px; font: inherit; color: var(--ink);
+    background: var(--bg); border: 1px solid var(--line); border-radius: 7px;
+  }
+  input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .row { display: flex; gap: 8px; }
+  .row input { flex: 1; }
+  button.go {
+    padding: 10px 18px; font: inherit; font-weight: 550; cursor: pointer;
+    background: var(--accent); color: #fff; border: 0; border-radius: 7px; white-space: nowrap;
+  }
+  .note { font-size: 12.5px; color: var(--muted); margin-top: 12px; }
+  .out { margin-top: 18px; }
+  .verdict { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+  .verdict.bad { color: var(--bad); }
+  .verdict.good { color: var(--good); }
+  .count { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+  ul.breaches { list-style: none; padding: 0; margin: 14px 0 0; max-height: 340px; overflow-y: auto; }
+  ul.breaches li { padding: 7px 2px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  ul.breaches li:last-child { border-bottom: 0; }
+  ul.breaches b { font-weight: 550; }
+  ul.breaches span { color: var(--muted); font-size: 12.5px; }
+  .meta { font-family: var(--mono); font-size: 12.5px; color: var(--muted); margin: 2px 0; }
+  .desc { margin: 12px 0 0; font-size: 14px; }
+  .tag {
+    display: inline-block; font-size: 12px; padding: 2px 8px; margin: 3px 4px 0 0;
+    border: 1px solid var(--line); border-radius: 20px; color: var(--muted);
+  }
+  .err { color: var(--bad); font-size: 14px; }
+  .privacy {
+    margin-top: 26px; padding: 14px 16px; border-left: 3px solid var(--accent);
+    background: var(--panel); font-size: 13px; color: var(--muted); border-radius: 0 7px 7px 0;
+  }
+  .privacy b { color: var(--ink); font-weight: 550; }
+  .privacy a { color: var(--accent); }
+  code { font-family: var(--mono); font-size: 12.5px; }
+  .attrib {
+    margin-top: 18px; font-size: 12.5px; color: var(--muted);
+    padding-top: 14px; border-top: 1px solid var(--line);
+  }
+  .attrib a { color: var(--accent); }
+  .srcnote { font-size: 12px; color: var(--muted); margin-top: 10px; }
+</style>
+
+<div class="wrap">
+  <h1>Hashfirst</h1>
+  <div class="sub">
+    Breach and password data from
+    <a href="https://haveibeenpwned.com" target="_blank" rel="noopener">Have I Been Pwned</a>.
+    No API key, no account, no backend.
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="pw">Check password</button>
+    <button role="tab" aria-selected="false" data-tab="br">Breach details</button>
+    <button role="tab" aria-selected="false" data-tab="all">All breaches</button>
+  </div>
+
+  <section class="panel" id="tab-pw">
+    <label for="pw">Password</label>
+    <div class="row">
+      <input id="pw" type="password" autocomplete="off" spellcheck="false" placeholder="Typed here, hashed here">
+      <button class="go" id="pw-go">Check</button>
+    </div>
+    <div class="note">Hashed in your browser. Only the first 5 characters of the SHA-1 are sent.</div>
+    <div class="out" id="pw-out"></div>
+  </section>
+
+  <section class="panel" id="tab-br" hidden>
+    <label for="br">Breach name</label>
+    <div class="row">
+      <input id="br" list="br-list" autocomplete="off" spellcheck="false" placeholder="Adobe">
+      <datalist id="br-list"></datalist>
+      <button class="go" id="br-go">Look up</button>
+    </div>
+    <div class="out" id="br-out"></div>
+  </section>
+
+  <section class="panel" id="tab-all" hidden>
+    <label for="flt">Filter</label>
+    <input id="flt" autocomplete="off" spellcheck="false" placeholder="Filter by name or domain">
+    <div class="out" id="all-out"></div>
+  </section>
+
+  <div class="privacy">
+    <b>Why this is safe.</b> Your password is SHA-1 hashed by your own browser.
+    Only a 5-character hash prefix goes to <code>api.pwnedpasswords.com</code>, which
+    returns every hash sharing that prefix. The comparison happens locally. HIBP cannot
+    tell which password you checked. This is the <b>k-anonymity model</b>, the scheme
+    HIBP documents for exactly this purpose.
+    <br><br>
+    <b>Email search is not here.</b> That endpoint needs a paid API key and would mean
+    sending your address to a server. Use
+    <a href="https://haveibeenpwned.com" target="_blank" rel="noopener">haveibeenpwned.com</a>
+    directly for that &mdash; free.
+  </div>
+
+  <div class="attrib">
+    Breach data on this page is sourced from
+    <a href="https://haveibeenpwned.com" target="_blank" rel="noopener">Have I Been Pwned</a>,
+    created by <a href="https://troyhunt.com" target="_blank" rel="noopener">Troy Hunt</a>, and is
+    licensed under a
+    <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">Creative
+    Commons Attribution 4.0 International License</a>. This site is not affiliated with,
+    endorsed by, or operated by Have I Been Pwned.
+    <div class="srcnote">
+      Independent browser client for the public HIBP API. Inspired by, but sharing no code with,
+      the <a href="https://github.com/davewatters/pwnytrap" target="_blank" rel="noopener">PwnyTrap
+      CLI</a> by David Watters.
+    </div>
+  </div>
+</div>
+
+<script>
+const PWD_API = 'https://api.pwnedpasswords.com/range/';
+const HIBP_API = 'https://haveibeenpwned.com/api/v3/';
+const $ = id => document.getElementById(id);
+let allBreaches = null;
+
+document.querySelectorAll('.tabs button').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.tabs button').forEach(b => {
+      const on = b === btn;
+      b.setAttribute('aria-selected', String(on));
+      $('tab-' + b.dataset.tab).hidden = !on;
+    });
+    if (btn.dataset.tab !== 'pw') loadBreaches().catch(e => showErr($('all-out'), e));
+  };
+});
+
+function showErr(node, e) {
+  node.innerHTML = '';
+  const d = document.createElement('div');
+  d.className = 'err';
+  d.textContent = e.message;
+  node.append(d);
+}
+
+async function sha1Hex(text) {
+  if (!crypto.subtle) {
+    throw new Error('crypto.subtle unavailable. Serve this page over http://localhost or https, not a file:// path.');
+  }
+  const buf = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
+async function checkPassword() {
+  const pw = $('pw').value;
+  const out = $('pw-out');
+  if (!pw) { out.innerHTML = ''; return; }
+  out.textContent = 'Checking...';
+  try {
+    const hash = await sha1Hex(pw);
+    const prefix = hash.slice(0, 5);
+    const suffix = hash.slice(5);
+    // Add-Padding makes every response a uniform size, so response length leaks nothing.
+    const res = await fetch(PWD_API + prefix, { headers: { 'Add-Padding': 'true' } });
+    if (!res.ok) throw new Error('API returned HTTP ' + res.status);
+    let count = 0;
+    for (const line of (await res.text()).split('\n')) {
+      const parts = line.trim().split(':');
+      if (parts[0] === suffix) { count = parseInt(parts[1], 10) || 0; break; }
+    }
+    out.innerHTML = '';
+    const v = document.createElement('div');
+    v.className = 'verdict ' + (count ? 'bad' : 'good');
+    v.textContent = count ? 'Pwned.' : 'Not found in any known breach.';
+    const c = document.createElement('div');
+    c.className = 'count';
+    c.textContent = count
+      ? 'Seen ' + count.toLocaleString() + ' times. Do not use this password.'
+      : 'Absence is not proof it is safe, only that HIBP has not seen it.';
+    out.append(v, c);
+  } catch (e) {
+    showErr(out, e);
+  }
+}
+$('pw-go').onclick = checkPassword;
+$('pw').addEventListener('keydown', e => { if (e.key === 'Enter') checkPassword(); });
+
+async function loadBreaches() {
+  if (allBreaches) return allBreaches;
+  const res = await fetch(HIBP_API + 'breaches');
+  if (!res.ok) throw new Error('API returned HTTP ' + res.status);
+  allBreaches = await res.json();
+  const dl = $('br-list');
+  for (const b of allBreaches) {
+    const o = document.createElement('option');
+    o.value = b.Name;
+    dl.append(o);
+  }
+  renderAll();
+  return allBreaches;
+}
+
+// HIBP descriptions contain markup. Parse and take text only, never innerHTML.
+function plain(html) {
+  return new DOMParser().parseFromString(html || '', 'text/html').body.textContent || '';
+}
+
+async function breachDetails() {
+  const out = $('br-out');
+  const name = $('br').value.trim().split(' ').join('');
+  if (!name) { out.innerHTML = ''; return; }
+  out.textContent = 'Looking up...';
+  try {
+    const res = await fetch(HIBP_API + 'breach/' + encodeURIComponent(name));
+    if (res.status === 404) throw new Error('No breach named "' + name + '". Check the All breaches tab.');
+    if (!res.ok) throw new Error('API returned HTTP ' + res.status);
+    const b = await res.json();
+    out.innerHTML = '';
+    const t = document.createElement('div');
+    t.className = 'verdict';
+    t.textContent = b.Title;
+    out.append(t);
+    const rows = [
+      ['Domain', b.Domain],
+      ['Breached', b.BreachDate],
+      ['Accounts', (b.PwnCount || 0).toLocaleString()],
+      ['Verified', b.IsVerified ? 'yes' : 'no']
+    ];
+    for (const [k, v] of rows) {
+      const m = document.createElement('div');
+      m.className = 'meta';
+      m.textContent = k + ': ' + (v || 'n/a');
+      out.append(m);
+    }
+    const d = document.createElement('p');
+    d.className = 'desc';
+    d.textContent = plain(b.Description);
+    out.append(d);
+    const tags = document.createElement('div');
+    for (const dc of b.DataClasses || []) {
+      const s = document.createElement('span');
+      s.className = 'tag';
+      s.textContent = dc;
+      tags.append(s);
+    }
+    out.append(tags);
+  } catch (e) {
+    showErr(out, e);
+  }
+}
+$('br-go').onclick = breachDetails;
+$('br').addEventListener('keydown', e => { if (e.key === 'Enter') breachDetails(); });
+
+function renderAll() {
+  const q = $('flt').value.trim().toLowerCase();
+  const out = $('all-out');
+  if (!allBreaches) { out.textContent = 'Loading...'; return; }
+  const hits = allBreaches.filter(b =>
+    !q || b.Name.toLowerCase().includes(q) || (b.Domain || '').toLowerCase().includes(q));
+  out.innerHTML = '';
+  const c = document.createElement('div');
+  c.className = 'count';
+  c.textContent = hits.length + ' of ' + allBreaches.length + ' breaches';
+  const ul = document.createElement('ul');
+  ul.className = 'breaches';
+  for (const b of hits.slice(0, 400)) {
+    const li = document.createElement('li');
+    const n = document.createElement('b');
+    n.textContent = b.Title;
+    const s = document.createElement('span');
+    s.textContent = '  ' + (b.Domain || '') + '  ' + b.BreachDate + '  ' +
+                    (b.PwnCount || 0).toLocaleString() + ' accounts';
+    li.append(n, s);
+    ul.append(li);
+  }
+  out.append(c, ul);
+}
+$('flt').addEventListener('input', renderAll);
+</script>
