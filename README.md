@@ -5,6 +5,16 @@ No API key, no account, no backend, no dependencies.
 
 The name is the guarantee: your password is hashed **before** anything is sent.
 
+## Use it now
+
+**→ [robgilm.github.io/hashfirst](https://robgilm.github.io/hashfirst/)**
+
+Nothing to install, download, sign up for, or configure. Open the link and it works.
+
+It runs entirely in your browser — there is no server behind it that could log what you
+type. The page is served as static files from GitHub Pages, and every API call goes
+straight from your browser to Have I Been Pwned.
+
 ## What it does
 
 | Tab | Endpoint | Key required |
@@ -30,10 +40,13 @@ HIBP therefore never learns which password you checked. This is the
 Requests also set `Add-Padding: true`, so the response is a uniform size and its length
 leaks nothing either.
 
-## Running it
+## Running your own copy
 
-Needs a secure context, because `crypto.subtle` is unavailable over `file://`. Serve it over
-`http://localhost` or HTTPS:
+Optional — the hosted link above needs none of this. But it's one file, so self-hosting is
+trivial if you'd rather not trust someone else's deployment.
+
+Serve it over `http://localhost` or HTTPS. It needs a secure context, because
+`crypto.subtle` is unavailable over `file://`:
 
 ```bash
 python -m http.server 8899 --bind 127.0.0.1
